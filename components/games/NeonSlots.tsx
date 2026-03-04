@@ -119,26 +119,7 @@ export default function NeonSlots({ onPlay }: { onPlay: () => void }) {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-fuchsia-600/10 rounded-full blur-[100px] animate-pulse pointer-events-none" />
       </div>
 
-      <div className="text-center mb-6 w-full max-w-lg px-4 relative z-10 flex flex-col md:flex-row shadow-[0_0_20px_rgba(236,72,153,0.1)] rounded-xl border border-fuchsia-500/20 bg-black/60 backdrop-blur-sm items-center py-4">
-         <div className="flex-1 px-4 mb-4 md:mb-0">
-           <h3 className="text-pink-400 font-bold tracking-widest text-lg drop-shadow-[0_0_8px_rgba(236,72,153,0.8)] uppercase">
-             Tragamonedas Neón
-           </h3>
-           <p className="text-slate-300 text-xs mt-1 leading-relaxed">
-             Multiplica tu apuesta alineando los brillantes cristales. Alinéa 2 para recuperar, ¡alinéa 3 para el premio mayor!
-           </p>
-         </div>
-         {/* Decorative Canvas representation */}
-         <div className="w-24 h-24 mx-4 relative border border-purple-500/30 rounded-lg shrink-0 flex items-center justify-center p-2 bg-[#0a0515] overflow-hidden shadow-inner flex-wrap content-center gap-1">
-             <div className="w-5 h-5 bg-pink-500/20 rounded-full border border-pink-400 animate-pulse delay-75 shadow-[0_0_10px_#ec4899]"></div>
-             <div className="w-5 h-5 bg-cyan-500/20 border border-cyan-400 opacity-50 shadow-[0_0_10px_#22d3ee]"></div>
-             <div className="w-5 h-5 bg-purple-500/20 rounded-md border border-purple-400 opacity-50 shadow-[0_0_10px_#a855f7]"></div>
-             <div className="w-5 h-5 bg-pink-500/20 border border-pink-400 shadow-[0_0_10px_#ec4899]"></div>
-             <div className="w-5 h-5 bg-yellow-500/20 rounded-full border border-yellow-400 opacity-50 shadow-[0_0_10px_#eab308]"></div>
-             <div className="w-5 h-5 bg-pink-500/20 rounded-full border border-pink-400 animate-pulse shadow-[0_0_10px_#ec4899]"></div>
-             <div className="absolute inset-0 bg-gradient-to-t from-fuchsia-500/10 to-transparent pointer-events-none mix-blend-screen" />
-         </div>
-      </div>
+
       
       <div className="flex gap-4 md:gap-6 mb-8 bg-[#0b0712]/90 p-6 md:p-8 rounded-3xl border border-fuchsia-500/40 shadow-[0_0_30px_rgba(236,72,153,0.3),inset_0_0_20px_rgba(0,0,0,0.8)] relative z-10 w-full max-w-md justify-center">
         {reels.map((symbol, i) => (
