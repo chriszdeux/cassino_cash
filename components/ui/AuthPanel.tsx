@@ -122,15 +122,6 @@ export default function AuthPanel() {
           transition={{ duration: 0.2 }}
           className="flex flex-col gap-2 relative z-10"
         >
-           <button className="w-full bg-white text-black text-xs font-bold py-2 px-3 rounded-[3px] flex items-center gap-2 justify-center shadow-sm hover:bg-gray-200 transition-colors">
-              <span className="text-blue-600 font-black text-base leading-none">G</span> CONTINUAR CON GOOGLE
-           </button>
-           
-           <div className="flex items-center gap-2 my-1">
-              <div className="h-[1px] flex-1 bg-slate-700" />
-              <span className="text-[10px] text-slate-500 font-bold tracking-widest">O</span>
-              <div className="h-[1px] flex-1 bg-slate-700" />
-           </div>
 
            <form onSubmit={handleSubmit} className="flex flex-col gap-2">
              <input type={isLogin ? "text" : "email"} placeholder={isLogin ? "Usuario / Correo" : "Correo Electrónico"} value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} className="bg-[#111827] border border-slate-600 text-xs px-2 py-2 text-white outline-none focus:border-cyan-400 rounded-sm w-full transition-colors" />

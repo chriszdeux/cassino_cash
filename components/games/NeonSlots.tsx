@@ -73,7 +73,7 @@ export default function NeonSlots({ onPlay }: { onPlay: () => void }) {
       const request = { gameId: "neon-slots", betAmount: bet, currentBalance: balance } as PlayRequest;
       const [data] = await Promise.all([
           playGameLocally(request),
-          new Promise(resolve => setTimeout(resolve, 4000)) // Force minimum 5s spin duration per user request
+          new Promise(resolve => setTimeout(resolve, 3500)) // Force minimum 5s spin duration per user request
       ]);
       
       clearInterval(spinInterval);
