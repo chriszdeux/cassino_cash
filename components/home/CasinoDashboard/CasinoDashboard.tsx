@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GameConfig } from "@/types/game";
-import { Home, User, Shield, HelpCircle, Lock, Trophy, Minus, X } from "lucide-react";
+import { Home, User, Shield, HelpCircle, Lock, Trophy, Minus, X, Volume2, VolumeX, Volume1 } from "lucide-react";
 import { useCasinoStore } from "@/lib/store";
 import NeonSlots from "@/components/games/NeonSlots";
 import CyberRoulette from "@/components/games/CyberRoulette";
@@ -48,11 +48,85 @@ const STATIC_STARS = [
   { left: "31%", top: "91%", duration: "2.8s", delay: "1.5s" }, { left: "59%", top: "37%", duration: "1.7s", delay: "0.2s" },
   { left: "24%", top: "14%", duration: "2.1s", delay: "1.1s" }, { left: "72%", top: "79%", duration: "2.6s", delay: "0.6s" }
 ];
+function AudioController() {
+  const { volume, isMuted, setVolume, toggleMute } = useCasinoStore();
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+      audioRef.current.muted = isMuted;
+    }
+  }, [volume, isMuted]);
+
+  useEffect(() => {
+    const playAudio = async () => {
+      if (audioRef.current) {
+        try {
+          await audioRef.current.play();
+        } catch (err) {
+          console.warn("Autoplay prevented:", err);
+        }
+      }
+    };
+    playAudio();
+    
+    const handleInteraction = () => {
+      audioRef.current?.play().catch(()=>{}).finally(() => {
+        window.removeEventListener('click', handleInteraction);
+        window.removeEventListener('keydown', handleInteraction);
+      });
+    };
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('keydown', handleInteraction);
+
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+  }, []);
+
+  return (
+    <div className="flex items-center gap-2 bg-[#050510]/80 border border-slate-700 p-1.5 rounded-full backdrop-blur-md shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+      <audio ref={audioRef} src="/sounds/Velvet_Rake.mp3" loop />
+      <button 
+        onClick={toggleMute}
+        className="w-8 h-8 flex items-center justify-center rounded-full text-cyan-400 hover:bg-white/10 transition-colors"
+      >
+        {isMuted || volume === 0 ? <VolumeX size={16} /> : volume < 0.5 ? <Volume1 size={16} /> : <Volume2 size={16} />}
+      </button>
+      <input 
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        value={isMuted ? 0 : volume}
+        onChange={(e) => {
+           if (isMuted) toggleMute();
+           setVolume(parseFloat(e.target.value));
+        }}
+        className="w-20 md:w-24 accent-cyan-500 cursor-pointer"
+      />
+    </div>
+  )
+}
 
 export default function CasinoDashboard() {
   const [selectedGame, setSelectedGame] = useState<GameConfig | null>(null);
   const [activeTab, setActiveTab] = useState("Sala");
-  const { balance, user } = useCasinoStore();
+  const { balance, savedBalance, user } = useCasinoStore();
+  const [showCoins, setShowCoins] = useState(false);
+  const [coinsConfig, setCoinsConfig] = useState<{x: number, y: number}[]>([]);
+
+  const handleWithdrawSuccess = () => {
+     setCoinsConfig(Array.from({ length: 40 }).map(() => ({
+       x: Math.random() * 20 - 10,
+       y: Math.random() * 10 - 5
+     })));
+     setShowCoins(true);
+     setSelectedGame(null); // Close modal instantly
+     setTimeout(() => setShowCoins(false), 2000); // Clean up coins
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -72,7 +146,30 @@ export default function CasinoDashboard() {
 
   return (
     <div className="min-h-screen w-full bg-[#050510] text-cyan-50 font-mono relative overflow-hidden flex items-stretch p-2 md:p-6 gap-6 selection:bg-fuchsia-500/30">
-      <CasinoBackground />
+      {!selectedGame && <CasinoBackground />}
+
+      <AnimatePresence>
+        {showCoins && (
+           <div className="fixed inset-0 pointer-events-none z-[99999] overflow-hidden flex items-end justify-center pb-20">
+              {coinsConfig.map((config, i) => (
+                 <motion.div
+                    key={i}
+                    initial={{ opacity: 1, scale: 0, x: 0, y: 0 }}
+                    animate={{ 
+                       opacity: [0, 1, 1, 0],
+                       scale: [0, 2, 1.5, 0],
+                       x: `calc(40vw + ${config.x}vw)`,
+                       y: `calc(-85vh + ${config.y}vh)`
+                    }}
+                    transition={{ duration: 1.2, delay: i * 0.02, ease: "easeIn" }}
+                    className="absolute text-4xl drop-shadow-[0_0_15px_gold]"
+                 >
+                   🪙
+                 </motion.div>
+              ))}
+           </div>
+        )}
+      </AnimatePresence>
       
       {user ? (
         <>
@@ -209,7 +306,7 @@ export default function CasinoDashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 lg:p-12 pl-20 lg:pl-[200px]"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8"
           >
             <motion.div
               initial={{ scale: 0.95, y: 10, opacity: 0 }}
@@ -218,15 +315,15 @@ export default function CasinoDashboard() {
               className="relative w-full max-w-5xl h-full max-h-[90vh]"
             >
               <WindowPanel 
-                title={`JUGANDO: ${selectedGame.name.toUpperCase()}`} 
+                title={`🎮 ${selectedGame.name.toUpperCase()}`} 
                 controls={true} 
-                onClose={() => setSelectedGame(null)} 
+                onClose={balance === savedBalance ? () => setSelectedGame(null) : undefined}
                 className="h-full border-fuchsia-500 shadow-[0_0_50px_rgba(217,70,239,0.3)] bg-[#050510]/95 backdrop-blur-3xl"
               >
                 <div className="w-full h-full flex flex-col items-center justify-center rounded-sm relative overflow-y-auto pb-16 lg:pb-0">
                    <div className={`absolute inset-0 bg-gradient-to-tr ${selectedGame.theme} opacity-5 blur-3xl pointer-events-none`} />
                    
-                   <div className="relative z-10 w-full min-h-full flex items-center justify-center p-4">
+                   <div className="relative z-10 w-full min-h-full flex flex-col items-center justify-center p-4">
                      {selectedGame.id === 'neon-slots' ? (
                        <NeonSlots onPlay={() => {}} />
                      ) : selectedGame.id === 'cyber-roulette' ? (
@@ -252,6 +349,13 @@ export default function CasinoDashboard() {
                          Cargando lógica del juego...
                        </span>
                      )}
+
+                     <div className="mt-8 pt-6 w-full max-w-md flex flex-col items-center">
+                        <WithdrawAndCloseButton 
+                           onClose={() => setSelectedGame(null)} 
+                           onWithdrawSuccess={handleWithdrawSuccess}
+                        />
+                     </div>
                    </div>
                 </div>
               </WindowPanel>
@@ -275,16 +379,20 @@ interface WindowPanelProps {
   className?: string;
   controls?: boolean;
   onClose?: () => void;
+  headerAction?: React.ReactNode;
 }
 
-function WindowPanel({ title, children, className = "", controls = false, onClose }: WindowPanelProps) {
+function WindowPanel({ title, children, className = "", controls = false, onClose, headerAction }: WindowPanelProps) {
   return (
     <div className={`border-[1.5px] border-cyan-800/80 bg-[#060a16]/95 rounded-md flex flex-col overflow-hidden ${className}`}>
       {title && (
-        <div className="bg-[#0a152e] border-b border-cyan-800/80 px-4 py-2 flex justify-between items-center text-white">
-          <span className="font-bold tracking-widest text-sm drop-shadow-md">{title}</span>
+        <div className="bg-[#0a152e] border-b border-cyan-800/80 px-4 py-2 flex justify-between items-center text-white min-h-[44px]">
+          <div className="flex items-center gap-4 truncate">
+             <span className="font-bold tracking-widest text-sm drop-shadow-md truncate">{title}</span>
+             {headerAction}
+          </div>
           {controls && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 ml-4 shrink-0">
               <button className="text-cyan-600 hover:text-white bg-black/50 px-2 py-0.5 rounded-sm border border-cyan-900 transition-colors"><Minus size={14} strokeWidth={3} /></button>
               <button onClick={onClose} className="text-red-500 hover:text-white bg-black/50 px-2 py-0.5 rounded-sm border border-red-900 transition-colors"><X size={14} strokeWidth={3} /></button>
             </div>
@@ -434,45 +542,23 @@ function HelpPanel() {
 
 function NeonTitle() {
   return (
-    <div className="flex justify-center my-2 pointer-events-none">
-      <div className="border-[3px] border-pink-500 py-1.5 px-6 rounded-md shadow-[0_0_20px_rgba(236,72,153,0.6),inset_0_0_15px_rgba(236,72,153,0.4)] bg-[#1a0515]/80 transform -skew-x-[15deg] backdrop-blur-sm relative">
+    <div className="flex flex-col items-center justify-center my-2 gap-4">
+      <div className="border-[3px] border-pink-500 py-1.5 px-6 rounded-md shadow-[0_0_20px_rgba(236,72,153,0.6),inset_0_0_15px_rgba(236,72,153,0.4)] bg-[#1a0515]/80 transform -skew-x-[15deg] backdrop-blur-sm relative pointer-events-none">
         <div className="absolute -inset-1 border-2 border-cyan-400 opacity-50 blur-[2px] rounded-md" />
         <h1 className="text-3xl lg:text-5xl text-center font-black leading-none tracking-widest transform skew-x-[15deg]">
           <span className="block text-pink-400 drop-shadow-[0_0_15px_rgba(236,72,153,1)] mb-1">Proyecto</span>
           <span className="block text-cyan-300 drop-shadow-[0_0_15px_rgba(34,211,238,1)] text-2xl lg:text-3xl">Cash</span>
         </h1>
       </div>
+      <div className="z-50 shrink-0">
+        <AudioController />
+      </div>
     </div>
   )
 }
 
-function UserProfilePanel({ balance, username, userId }: { balance: number, username?: string, userId?: string }) {
-  const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
+function UserProfilePanel({ balance, username }: { balance: number, username?: string, userId?: string }) {
   const { setUser, setBalance } = useCasinoStore();
-
-  const handleSave = async () => {
-    if (!userId) return;
-    setSaving(true);
-    setSaveStatus("idle");
-    try {
-      const res = await fetch("/api/user/save-balance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, balance })
-      });
-      if (res.ok) {
-        setSaveStatus("success");
-      } else {
-        setSaveStatus("error");
-      }
-    } catch (e) {
-      setSaveStatus("error");
-    } finally {
-      setSaving(false);
-      setTimeout(() => setSaveStatus("idle"), 2000);
-    }
-  };
 
   const handleLogout = () => {
     setUser(null);
@@ -501,22 +587,11 @@ function UserProfilePanel({ balance, username, userId }: { balance: number, user
            
            <div className="flex gap-2 w-full mt-2">
              <button 
-               onClick={handleSave} 
-               disabled={saving}
-               className={`flex-1 font-bold rounded-[4px] py-1.5 shadow-[0_4px_0_#0a1524,0_0_15px_rgba(56,189,248,0.3)] border transition-all uppercase tracking-widest text-xs active:translate-y-1 active:shadow-none
-                 ${saveStatus === "success" ? "bg-green-600 border-green-500 text-white" : 
-                   saveStatus === "error" ? "bg-red-600 border-red-500 text-white" : 
-                   "bg-gradient-to-b from-[#234b6b] to-[#122e47] hover:from-[#2c5f87] hover:to-[#183b5c] border-cyan-700/50 text-white"} 
-                 disabled:opacity-50`}
+               onClick={handleLogout} 
+             title="Cerrar Sesión"
+             className="w-full bg-red-900/50 hover:bg-red-800/80 border border-red-700 text-red-300 rounded-[4px] shadow-sm flex items-center justify-center transition-colors hover:text-white"
              >
-               {saving ? "GUARDANDO..." : saveStatus === "success" ? "¡GUARDADO!" : "DEPOSITAR"}
-             </button>
-             <button 
-               onClick={handleLogout}
-               className="w-10 bg-red-900/50 hover:bg-red-800/80 border border-red-700 text-red-300 rounded-[4px] shadow-sm flex items-center justify-center transition-colors hover:text-white"
-               title="Cerrar Sesión"
-             >
-               <X size={16} strokeWidth={3} />
+              Cerrar Sesión
              </button>
            </div>
            
@@ -552,15 +627,27 @@ function HighScoresPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/user/high-scores')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.users) {
-          setHighScores(data.users);
-        }
-      })
-      .catch(err => console.error("Error fetching high scores", err))
-      .finally(() => setLoading(false));
+    const fetchScores = () => {
+      fetch('/api/user/high-scores')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.users) {
+            setHighScores(prev => {
+              // Deep compare to avoid unnecessary state updates
+              if (JSON.stringify(prev) === JSON.stringify(data.users)) {
+                return prev;
+              }
+              return data.users;
+            });
+          }
+        })
+        .catch(err => console.error("Error fetching high scores", err))
+        .finally(() => setLoading(false));
+    };
+
+    fetchScores();
+    const interval = setInterval(fetchScores, 5 * 60 * 1000); // Poll every 5 minutes
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -625,31 +712,44 @@ interface GameBubbleProps {
 }
 
 function GameBubble({ game, onSelect }: GameBubbleProps) {
+  const isAvailable = game.id === 'neon-slots';
+
   return (
-    <div className="flex flex-col items-center gap-2 cursor-pointer group w-full" onClick={() => onSelect(game)}>
+    <div className={`flex flex-col items-center gap-2 group w-full ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`} onClick={() => isAvailable && onSelect(game)}>
       <motion.div 
-         whileHover={{ scale: 1.05 }}
-         whileTap={{ scale: 0.95 }}
-         className={`relative w-[4.5rem] h-[4.5rem] md:w-[6rem] md:h-[6rem] rounded-full border-[3px] border-cyan-400 bg-gradient-to-br ${game.theme} p-0.5 shadow-[0_0_15px_rgba(34,211,238,0.4),inset_0_0_10px_rgba(255,255,255,0.5)] group-hover:shadow-[0_0_25px_rgba(34,211,238,0.8),inset_0_0_15px_rgba(255,255,255,0.8)] transition-all`}
+         whileHover={isAvailable ? { scale: 1.05 } : {}}
+         whileTap={isAvailable ? { scale: 0.95 } : {}}
+         className={`relative w-[4.5rem] h-[4.5rem] md:w-[6rem] md:h-[6rem] rounded-full border-[3px] bg-gradient-to-br p-0.5 transition-all
+           ${isAvailable ? `border-cyan-400 ${game.theme} shadow-[0_0_15px_rgba(34,211,238,0.4),inset_0_0_10px_rgba(255,255,255,0.5)] group-hover:shadow-[0_0_25px_rgba(34,211,238,0.8),inset_0_0_15px_rgba(255,255,255,0.8)]` 
+           : 'border-slate-700 bg-slate-800 opacity-80 grayscale'}`}
       >
         <div className="w-full h-full rounded-full bg-[#0a0f1d] flex items-center justify-center overflow-hidden relative shadow-[inset_0_0_15px_rgba(0,0,0,0.9)]">
-           <div className={`absolute inset-0 bg-gradient-to-tr ${game.theme} mix-blend-color-dodge opacity-20`} />
+           <div className={`absolute inset-0 bg-gradient-to-tr mix-blend-color-dodge opacity-20 ${isAvailable ? game.theme : 'from-slate-500 to-slate-900'}`} />
            
            {/* Scanline effect */}
            <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none" />
 
-           <span className="text-3xl md:text-4xl drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] group-hover:animate-pulse">
+           <span className={`text-3xl md:text-4xl drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] ${isAvailable ? 'group-hover:animate-pulse' : 'opacity-40'}`}>
              {getGameIcon(game.name)}
            </span>
            
            {/* Top reflection */}
            <div className="absolute top-0 inset-x-2 h-1/3 bg-white/20 rounded-full blur-[2px]" />
+
+           {/* Mantenimiento Badge */}
+           {!isAvailable && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[1px]">
+                 <div className="bg-red-900/80 border border-red-500 text-red-100 font-black text-[7px] md:text-[9px] uppercase tracking-wider px-1 py-0.5 -rotate-12 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                    Mantenimiento
+                 </div>
+              </div>
+           )}
         </div>
         {/* Magic stars decoration on hover */}
-        <div className="absolute -top-1 -right-1 text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-[0_0_5px_yellow]">✨</div>
+        {isAvailable && <div className="absolute -top-1 -right-1 text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-[0_0_5px_yellow]">✨</div>}
       </motion.div>
       <div className="flex flex-col items-center mt-1">
-        <span className="text-white text-[11px] md:text-sm font-bold tracking-widest text-center group-hover:text-cyan-300">
+        <span className={`text-[11px] md:text-sm font-bold tracking-widest text-center ${isAvailable ? 'text-white group-hover:text-cyan-300' : 'text-slate-500'}`}>
           {game.name}
         </span>
         <span className="text-slate-400 text-[9px] md:text-[10px] text-center max-w-[120px] opacity-0 group-hover:opacity-100 transition-opacity whitespace-normal leading-tight">
@@ -676,11 +776,89 @@ function getGameIcon(name: string) {
   return map[name] || '🎮';
 }
 
+function WithdrawAndCloseButton({ onClose, onWithdrawSuccess }: { onClose: () => void, onWithdrawSuccess?: () => void }) {
+  const { balance, savedBalance, user, setSavedBalance } = useCasinoStore();
+  const [loading, setLoading] = useState(false);
+  
+  const diff = balance - savedBalance;
+
+  const handleAction = async () => {
+    if (diff === 0) {
+      onClose();
+      return;
+    }
+
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const res = await fetch("/api/user/save-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, deposit: diff })
+      });
+      if (res.ok) {
+        setSavedBalance(balance); // Sync states
+        if (diff > 0 && onWithdrawSuccess) {
+           onWithdrawSuccess();
+        } else {
+           onClose();
+        }
+      }
+    } catch {
+       alert("Error de red al sincronizar.");
+       setLoading(false);
+    }
+  };
+
+  return (
+    <motion.button 
+      animate={{ 
+         y: diff > 0 ? [0, -4, 0] : 0,
+         scale: diff < 0 ? [1, 0.98, 1] : 1
+      }}
+      transition={{ 
+         duration: diff > 0 ? 0.4 : 1, 
+         repeat: diff !== 0 ? Infinity : 0, 
+         repeatDelay: diff > 0 ? 1.5 : 0.5 
+      }}
+      onClick={handleAction}
+      disabled={loading}
+      className={`group relative overflow-hidden mt-4 px-8 py-3 w-full max-w-sm border font-black tracking-widest text-sm rounded-sm shadow-md active:scale-[0.98] transition-all ${
+        diff > 0 ? "bg-gradient-to-tr from-cyan-900 via-teal-700 to-emerald-500 text-white border-cyan-400 hover:shadow-[0_0_30px_rgba(45,212,191,0.8)] border-b-4 hover:-translate-y-1" 
+        : diff < 0 ? "bg-red-600/20 text-red-300 border-red-500 hover:bg-red-600/40 hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] border-b-4" 
+        : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700/80 hover:text-white border-b-4"
+      }`}
+    >
+      {diff > 0 && (
+        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.4)_50%,transparent_75%)] bg-[length:250%_250%,100%_100%] animate-diamond-shine mix-blend-overlay opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      )}
+      <span className="relative z-10 flex items-center justify-center gap-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+        {loading ? "PROCESANDO..." : diff > 0 ? (
+          <>
+            <span className="text-lg drop-shadow-[0_0_8px_white] animate-pulse">💎</span>
+            {`RETIRAR +${diff.toLocaleString()} G Y CERRAR`}
+            <span className="text-lg drop-shadow-[0_0_8px_white] animate-pulse">💎</span>
+          </>
+        ) : diff < 0 ? `GUARDAR ${diff.toLocaleString()} G Y CERRAR` : "CERRAR JUEGO"}
+      </span>
+    </motion.button>
+  );
+}
+
 function AnimatedBalance({ balance }: { balance: number }) {
   const [glow, setGlow] = useState<"none" | "green" | "red">("none");
+  const prevBalanceRef = useRef(balance);
 
   useEffect(() => {
-    const t = setTimeout(() => setGlow("green"), 0);
+    let t: NodeJS.Timeout;
+    if (balance > prevBalanceRef.current) {
+       t = setTimeout(() => setGlow("green"), 10);
+    } else if (balance < prevBalanceRef.current) {
+       t = setTimeout(() => setGlow("red"), 10);
+    }
+    prevBalanceRef.current = balance;
+    
     const t2 = setTimeout(() => setGlow("none"), 800);
     return () => {
       clearTimeout(t);
@@ -691,9 +869,13 @@ function AnimatedBalance({ balance }: { balance: number }) {
   return (
     <motion.div 
       key={balance}
-      initial={{ scale: 1.1, color: glow === "green" ? "#4ade80" : "#ffffff" }}
-      animate={{ scale: 1, color: "#ffffff" }}
-      className="text-white text-md lg:text-lg font-black tracking-widest drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] bg-black/40 px-4 py-1.5 rounded-sm border border-slate-700/50"
+      initial={{ scale: 1.1, color: glow === "green" ? "#4ade80" : glow === "red" ? "#f87171" : "#ffffff" }}
+      animate={{ 
+         scale: 1, 
+         color: "#ffffff",
+         boxShadow: glow === "green" ? "0 0 20px rgba(74,222,128,0.5)" : glow === "red" ? "0 0 20px rgba(248,113,113,0.5)" : "0 0 0px rgba(0,0,0,0)"
+      }}
+      className={`text-white text-md lg:text-lg font-black tracking-widest bg-black/40 px-4 py-1.5 rounded-sm border transition-shadow duration-500 duration-300 ${glow === "green" ? "border-green-400/50" : glow === "red" ? "border-red-400/50" : "border-slate-700/50 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"}`}
     >
       Créditos: {balance.toLocaleString()} G
     </motion.div>

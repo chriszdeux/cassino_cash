@@ -7,15 +7,15 @@ export async function POST(req: Request) {
     await dbConnect();
 
     const body = await req.json();
-    const { userId, balance } = body;
+    const { userId, deposit } = body;
 
-    if (!userId || typeof balance !== 'number') {
+    if (!userId || typeof deposit !== 'number') {
       return NextResponse.json({ success: false, message: 'Faltan datos o formato incorrecto.' }, { status: 400 });
     }
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { balance },
+      { $inc: { balance: deposit } },
       { new: true }
     );
 

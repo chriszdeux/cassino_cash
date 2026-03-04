@@ -24,3 +24,21 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes diamond-shine {
+  0% { background-position: 0% center; }
+  100% { background-position: -200% center; }
+}
+
+.animate-diamond-shine {
+  animation: diamond-shine 3s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(200%) skewX(-15deg); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite ease-in-out;
+}

@@ -12,10 +12,16 @@ interface UserData {
 
 interface CasinoState {
   balance: number;
+  savedBalance: number;
   user: UserData | null;
+  volume: number;
+  isMuted: boolean;
   setBalance: (balance: number) => void;
+  setSavedBalance: (balance: number) => void;
   updateBalance: (amount: number) => void;
   setUser: (user: UserData | null) => void;
+  setVolume: (volume: number) => void;
+  toggleMute: () => void;
 }
 
 const secureStorage = {
@@ -42,10 +48,16 @@ export const useCasinoStore = create<CasinoState>()(
   persist(
     (set) => ({
       balance: 0,
+      savedBalance: 0,
       user: null,
+      volume: 0.5,
+      isMuted: false,
       setBalance: (balance) => set({ balance }),
+      setSavedBalance: (balance) => set({ savedBalance: balance }),
       updateBalance: (amount) => set((state) => ({ balance: state.balance + amount })),
       setUser: (user) => set({ user }),
+      setVolume: (volume) => set({ volume }),
+      toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
     }),
     {
       name: 'casino-storage',

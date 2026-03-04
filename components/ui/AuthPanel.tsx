@@ -7,7 +7,7 @@ import { useCasinoStore } from "@/lib/store";
 
 export default function AuthPanel() {
   const [isLogin, setIsLogin] = useState(true);
-  const { setUser, setBalance } = useCasinoStore();
+  const { setUser, setBalance, setSavedBalance } = useCasinoStore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,13 +42,14 @@ export default function AuthPanel() {
           setTimeout(() => {
             setUser({ id: data.user.id, username: data.user.username, email: data.user.email });
             setBalance(data.user.balance);
+            setSavedBalance(data.user.balance);
             // Component unmounts here since user is set
           }, 1500);
         } else {
           setErrorMsg(data.message || "Error al iniciar sesión.");
           setLoading(false);
         }
-      } catch (_err) {
+      } catch {
         setErrorMsg("Error de conexión.");
         setLoading(false);
       }
@@ -80,12 +81,13 @@ export default function AuthPanel() {
           setTimeout(() => {
             setUser({ id: data.user.id, username: data.user.username, email: data.user.email });
             setBalance(data.user.balance);
+            setSavedBalance(data.user.balance);
           }, 1500);
         } else {
           setErrorMsg(data.message || "Error al registrar.");
           setLoading(false);
         }
-      } catch (_err) {
+      } catch {
         setErrorMsg("Error de conexión.");
         setLoading(false);
       }
