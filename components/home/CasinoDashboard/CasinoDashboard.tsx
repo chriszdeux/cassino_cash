@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, animate } from "framer-motion";
 import { GameConfig } from "@/types/game";
 import { Home, User, Shield, HelpCircle, Lock, Trophy, Minus, X, Volume2, VolumeX, Volume1 } from "lucide-react";
 import { useCasinoStore } from "@/lib/store";
@@ -152,17 +152,18 @@ export default function CasinoDashboard() {
         {showCoins && (
            <div className="fixed inset-0 pointer-events-none z-[99999] overflow-hidden flex items-end justify-center pb-20">
               {coinsConfig.map((config, i) => (
-                 <motion.div
+                  <motion.div
                     key={i}
-                    initial={{ opacity: 1, scale: 0, x: 0, y: 0 }}
+                    initial={{ opacity: 0, scale: 0, x: "50vw", y: "50vh" }}
                     animate={{ 
                        opacity: [0, 1, 1, 0],
-                       scale: [0, 2, 1.5, 0],
-                       x: `calc(40vw + ${config.x}vw)`,
-                       y: `calc(-85vh + ${config.y}vh)`
+                       scale: [0, 1.5, 1, 0.5],
+                       // The target needs to be the right column or left profile where the balance is
+                       x: ["50vw", `calc(50vw + ${config.x * 20}px)`, "85vw"],
+                       y: ["50vh", `calc(50vh + ${config.y * 20}px)`, "10vh"]
                     }}
-                    transition={{ duration: 1.2, delay: i * 0.02, ease: "easeIn" }}
-                    className="absolute text-4xl drop-shadow-[0_0_15px_gold]"
+                    transition={{ duration: 1.5, delay: i * 0.05, ease: "easeInOut" }}
+                    className="absolute text-3xl drop-shadow-[0_0_15px_gold] z-[99999]"
                  >
                    🪙
                  </motion.div>
@@ -712,7 +713,7 @@ interface GameBubbleProps {
 }
 
 function GameBubble({ game, onSelect }: GameBubbleProps) {
-  const isAvailable = game.id === 'neon-slots';
+  const isAvailable = game.id === 'neon-slots' || game.id === 'cyber-roulette';
 
   return (
     <div className={`flex flex-col items-center gap-2 group w-full ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`} onClick={() => isAvailable && onSelect(game)}>
@@ -849,35 +850,69 @@ function WithdrawAndCloseButton({ onClose, onWithdrawSuccess }: { onClose: () =>
 function AnimatedBalance({ balance }: { balance: number }) {
   const [glow, setGlow] = useState<"none" | "green" | "red">("none");
   const prevBalanceRef = useRef(balance);
+  const [displayValue, setDisplayValue] = useState(balance);
 
   useEffect(() => {
     let t: NodeJS.Timeout;
-    if (balance > prevBalanceRef.current) {
+    const isIncreasing = balance > prevBalanceRef.current;
+    if (isIncreasing) {
        t = setTimeout(() => setGlow("green"), 10);
     } else if (balance < prevBalanceRef.current) {
        t = setTimeout(() => setGlow("red"), 10);
     }
+    
+    // Smooth number animation
+    const controls = animate(prevBalanceRef.current, balance, {
+      duration: 1,
+      ease: "easeOut",
+      onUpdate: (value) => {
+        setDisplayValue(Math.round(value));
+      }
+    });
+
     prevBalanceRef.current = balance;
     
-    const t2 = setTimeout(() => setGlow("none"), 800);
+    const t2 = setTimeout(() => setGlow("none"), 1500);
     return () => {
       clearTimeout(t);
       clearTimeout(t2);
+      controls.stop();
     };
   }, [balance]);
 
   return (
     <motion.div 
-      key={balance}
-      initial={{ scale: 1.1, color: glow === "green" ? "#4ade80" : glow === "red" ? "#f87171" : "#ffffff" }}
+      key={"balance-container"}
+      initial={{ scale: 1 }}
       animate={{ 
-         scale: 1, 
+         scale: glow !== "none" ? 1.05 : 1, 
          color: "#ffffff",
          boxShadow: glow === "green" ? "0 0 20px rgba(74,222,128,0.5)" : glow === "red" ? "0 0 20px rgba(248,113,113,0.5)" : "0 0 0px rgba(0,0,0,0)"
       }}
-      className={`text-white text-md lg:text-lg font-black tracking-widest bg-black/40 px-4 py-1.5 rounded-sm border transition-shadow duration-500 duration-300 ${glow === "green" ? "border-green-400/50" : glow === "red" ? "border-red-400/50" : "border-slate-700/50 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"}`}
+      className={`relative text-white text-md lg:text-lg font-black tracking-widest bg-black/40 px-4 py-1.5 rounded-sm border transition-shadow duration-500 ${glow === "green" ? "border-green-400/50" : glow === "red" ? "border-red-400/50" : "border-slate-700/50 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"}`}
     >
-      Créditos: {balance.toLocaleString()} G
+      <div className="flex items-center gap-1">
+         <span>Créditos:</span>
+         <span className={`${glow === "green" ? "text-green-400" : glow === "red" ? "text-red-400" : "text-cyan-400"} transition-colors duration-300`}>
+            {displayValue.toLocaleString()}
+         </span>
+         <span>G</span>
+      </div>
+      
+      {/* Mini floating particles when winning */}
+      <AnimatePresence>
+        {glow === "green" && (
+          <motion.div 
+            initial={{ opacity: 1, y: 0 }} 
+            animate={{ opacity: 0, y: -20 }} 
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1 }}
+            className="absolute -top-4 right-2 text-green-400 font-bold text-sm pointer-events-none"
+          >
+            +
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
-  );
+  )
 }
